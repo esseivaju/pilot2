@@ -553,8 +553,8 @@ def cleanup(job):
     logger.info("overall cleanup function is called")
 
     # make sure the workdir is deleted
-    if remove_dir_tree(job.workdir):
-        logger.info('removed %s' % job.workdir)
+    # if remove_dir_tree(job.workdir):
+    #     logger.info('removed %s' % job.workdir)
 
     if os.path.exists(job.workdir):
         logger.warning('work directory still exists: %s' % job.workdir)
