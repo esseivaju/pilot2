@@ -116,9 +116,7 @@ class MessageThread(threading.Thread):
                     raise MessageFailure("No message server.")
 
                 size, buf = self.__message_server.try_recv_raw()
-                if size == -1:
-                    time.sleep(1)
-                else:
+                if size >= 0:
                     self.__message_queue.put(buf)
         except PilotException as e:
             self.terminate()

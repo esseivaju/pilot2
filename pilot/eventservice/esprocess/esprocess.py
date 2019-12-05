@@ -65,6 +65,9 @@ class ESProcess(threading.Thread):
         self.pid = None
         self.__is_payload_started = False
 
+        self.__ranges_queue = queue.Queue()
+        self.__fetch_ranges_thread = threading.Thread(target=self.check_ranges_cache, name="fetch_ranges_thread")
+
         self.__ret_code = None
         self.setName("ESProcess")
         self.corecount = 1
@@ -247,6 +250,7 @@ class ESProcess(threading.Thread):
         try:
             self.init_message_thread()
             self.init_payload_process()
+            self.__fetch_ranges_thread.start()
         except Exception as e:
             # TODO: raise exceptions
             self.__ret_code = -1
@@ -315,10 +319,18 @@ class ESProcess(threading.Thread):
         Get one event range to be sent to payload
         """
         logger.debug("Number of cached event ranges: %s" % len(self.event_ranges_cache))
-        if not self.event_ranges_cache:
-            event_ranges = self.get_event_ranges()
-            if event_ranges:
-                self.event_ranges_cache.extend(event_ranges)
+        try:
+            ranges = None
+            if not self.is_no_more_events and not self.event_ranges_cache:
+                logger.debug("Event cache empty, waiting for http call...")
+                ranges = self.__ranges_queue.get()
+            else:
+                ranges = self.__ranges_queue.get_nowait()
+
+            if ranges:
+                self.event_ranges_cache.extend(ranges)
+        except queue.Empty as e:
+            pass
 
         if self.event_ranges_cache:
             event_range = self.event_ranges_cache.pop(0)
@@ -572,7 +584,6 @@ class ESProcess(threading.Thread):
             try:
                 self.monitor()
                 self.handle_messages()
-                time.sleep(1)
             except PilotException as e:
                 logger.error('PilotException caught in the main loop: %s, %s' % (e.get_detail(), traceback.format_exc()))
                 # TODO: define output message exception. If caught 3 output message exception, terminate
@@ -586,3 +597,15 @@ class ESProcess(threading.Thread):
         self.clean()
         self.stop_message_thread()
         logger.debug('main loop finished')
+
+    def check_ranges_cache(self):
+
+        while not self.is_no_more_events:
+            if len(self.event_ranges_cache) < int(self.corecount/2) and self.__ranges_queue.empty():
+                event_ranges = self.get_event_ranges()
+                if event_ranges:
+                    self.__ranges_queue.put(event_ranges)
+                else:
+                    self.is_no_more_events = True
+                    self.__no_more_event_time = time.time()
+                self.__ranges_queue.put(event_ranges)

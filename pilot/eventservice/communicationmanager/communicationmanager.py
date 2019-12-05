@@ -292,7 +292,7 @@ class CommunicationManager(threading.Thread, PluginFactory):
             return
 
         while req.response is None:
-            time.sleep(1)
+            time.sleep(0.1)
         if req.response.exception:
             raise req.response.exception
         if req.response.status is False:
