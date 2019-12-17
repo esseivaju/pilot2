@@ -1319,9 +1319,9 @@ def remove_archives(workdir):
     for root, dirnames, filenames in os.walk(workdir):
         for filename in fnmatch.filter(filenames, '*.a'):
             matches.append(os.path.join(root, filename))
-    for root, dirnames, filenames in os.walk(os.path.dirname(workdir)):
-        for filename in fnmatch.filter(filenames, 'EventService_premerge_*.tar'):
-            matches.append(os.path.join(root, filename))
+    #for root, dirnames, filenames in os.walk(os.path.dirname(workdir)):
+    #    for filename in fnmatch.filter(filenames, 'EventService_premerge_*.tar'):
+    #        matches.append(os.path.join(root, filename))
     if matches != []:
         for f in matches:
             remove(f)
